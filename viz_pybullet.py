@@ -12,6 +12,22 @@ from avp_stream import VisionProStreamer
 import argparse
 
 class PyBulletVisualizer:
+    # 手指骨架连接关系 (标准手部骨架21关节)
+    FINGER_CONNECTIONS = [
+        # 手腕到各指根部
+        (0, 1), (0, 5), (0, 9), (0, 13), (0, 17),
+        # 拇指
+        (1, 2), (2, 3), (3, 4),
+        # 食指
+        (5, 6), (6, 7), (7, 8),
+        # 中指
+        (9, 10), (10, 11), (11, 12),
+        # 无名指
+        (13, 14), (14, 15), (15, 16),
+        # 小指
+        (17, 18), (18, 19), (19, 20),
+    ]
+    
     def __init__(self, ip, record=False, follow_camera=True):
         self.ip = ip
         self.record = record
@@ -31,6 +47,10 @@ class PyBulletVisualizer:
         
         # 创建几何体
         self.setup_geometry()
+        
+        # 存储连接线ID
+        self.right_finger_lines = []
+        self.left_finger_lines = []
         
         # 运行状态
         self.running = True
@@ -138,7 +158,7 @@ class PyBulletVisualizer:
         p.resetBasePositionAndOrientation(self.left_wrist_body, left_pos, left_quat)
     
     def update_fingers(self, right_fingers, left_fingers):
-        """更新手指关节位置和姿态"""
+        """更新手指关节位置和姿态，并绘制骨架连接"""
         # 更新右手关节
         for i, finger_matrix in enumerate(right_fingers):
             finger_pos = finger_matrix[:3, 3]
@@ -152,6 +172,39 @@ class PyBulletVisualizer:
             finger_rot = finger_matrix[:3, :3]
             finger_quat = self.matrix_to_quaternion(finger_rot)
             p.resetBasePositionAndOrientation(self.left_finger_bodies[i], finger_pos, finger_quat)
+        
+        # 移除旧的连接线
+        for line_id in self.right_finger_lines:
+            p.removeUserDebugItem(line_id)
+        for line_id in self.left_finger_lines:
+            p.removeUserDebugItem(line_id)
+        
+        self.right_finger_lines = []
+        self.left_finger_lines = []
+        
+        # 绘制右手骨架连接线
+        for i, j in self.FINGER_CONNECTIONS:
+            if i < len(right_fingers) and j < len(right_fingers):
+                pos_i = right_fingers[i][:3, 3]
+                pos_j = right_fingers[j][:3, 3]
+                line_id = p.addUserDebugLine(
+                    pos_i, pos_j,
+                    lineColorRGB=[1, 0, 0],  # 红色
+                    lineWidth=3
+                )
+                self.right_finger_lines.append(line_id)
+        
+        # 绘制左手骨架连接线
+        for i, j in self.FINGER_CONNECTIONS:
+            if i < len(left_fingers) and j < len(left_fingers):
+                pos_i = left_fingers[i][:3, 3]
+                pos_j = left_fingers[j][:3, 3]
+                line_id = p.addUserDebugLine(
+                    pos_i, pos_j,
+                    lineColorRGB=[0, 0, 1],  # 蓝色
+                    lineWidth=3
+                )
+                self.left_finger_lines.append(line_id)
     
     def update_camera(self, head_matrix):
         """更新相机位置跟随头部"""
