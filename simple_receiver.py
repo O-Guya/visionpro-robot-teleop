@@ -7,7 +7,7 @@ from avp_stream import VisionProStreamer
 import numpy as np
 
 # 连接到Vision Pro
-streamer = VisionProStreamer(ip="192.168.1.185", record=False)
+streamer = VisionProStreamer(ip="192.168.1.152", record=False)
 
 while True:
     data = streamer.latest
